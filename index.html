@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>To-Do App</title>
+    <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="todo__background" aria-hidden="true"></div>
+    <main class="todo">
+        <!-- Header -->
+        <header class="todo__header">
+            <h1 class="todo__title">TODO</h1>
+            <button class="todo__theme-toggle" aria-label="Toggle theme">
+                <img src="images/icon-moon.svg" alt="Toggle theme">
+            </button>
+        </header>
+
+        <!-- Formulario de nueva tarea -->
+        <form class="todo__form">
+            <span class="todo__circle"></span>
+            <input type="text" name="task" class="todo__input" placeholder="Create a new todo..." aria-label="Create a new task">
+        </form>
+
+        <!-- Contenedor de lista y controles -->
+        <div class="todo__container">
+            <!-- Lista de tareas -->
+            <ul class="todo__list">
+                <li class="todo__item">
+                    <button class="todo__check checked">
+                        <img src="./images/icon-check.svg" alt="Task completed checkmark">
+                    </button>
+                    <p class="todo__text">Complete online JavaScript course</p>
+                    <button class="todo__delete">
+                        <img src="./images/icon-cross.svg" alt="">
+                    </button>
+                </li>
+            </ul>
+
+            <!-- Controles visuales debajo de la lista -->
+            <div class="todo__footer">
+                <span class="todo__items-left">3 items left</span>
+
+                <!-- Filtros solo visibles en escritorio -->
+                <div class="todo__filters-desktop">
+                    <button class="todo__filter todo__filter--active" data-filter="All">All</button>
+                    <button class="todo__filter" data-filter="Active">Active</button>
+                    <button class="todo__filter" data-filter="Completed">Completed</button>
+                </div>
+
+                <button class="todo__clear">Clear Completed</button>
+            </div>
+        
+        </div>
+
+        <!-- Filtros visibles solo en mobile -->
+        <div class="todo__filters-mobile">
+            <button class="todo__filter todo__filter--active" data-filter="All">All</button>
+            <button class="todo__filter" data-filter="Active">Active</button>
+            <button class="todo__filter" data-filter="Completed">Completed</button>
+        </div>
+
+        <!-- Texto informativo -->
+        <p class="todo__drag-info">Drag and drop to reorder list</p>
+
+    </main>
+    <script src="script.js"></script>
+</body>
+</html>
