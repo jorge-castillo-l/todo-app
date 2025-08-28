@@ -130,7 +130,7 @@ button, input, textarea, select {
     background-color: var(--input-bg);
     border-radius: 5px;
     overflow: hidden;
-    box-shadow: 0px 35px 50px -15px rgba(194, 195, 214, 0.5);
+    box-shadow: 0px 10px 15px -5px rgba(0, 0, 0, 0.3), 0px 5px 5px -5px rgba(0, 0, 0, 0.2);
 }
 
 .todo__list {
@@ -226,7 +226,7 @@ button, input, textarea, select {
 .todo__filters-mobile {
     margin-top: 1rem;
     border-radius: 5px;
-    box-shadow: 0px 35px 50px -15px rgba(194, 195, 214, 0.5);
+    box-shadow: 0px 10px 15px -5px rgba(0, 0, 0, 0.3), 0px 5px 5px -5px rgba(0, 0, 0, 0.2);
 }
 
 .todo__filter {
