@@ -21,11 +21,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // ===============================
     function createItem(task, completed = false) {
         const img_check = document.createElement('img');
-        img_check.src = './images/icon-check.svg';
+        img_check.src = './assets/icon-check.svg';
         img_check.alt = 'Task completed checkmark';
 
         const img_tododelete = document.createElement('img');
-        img_tododelete.src = './images/icon-cross.svg';
+        img_tododelete.src = './assets/icon-cross.svg';
         img_tododelete.alt = 'Delete icon';
 
         const button_delete = document.createElement('button');

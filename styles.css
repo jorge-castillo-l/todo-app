@@ -7,8 +7,8 @@
     --accent-color: hsl(220, 98%, 61%);
     --checkbox-bg: hsl(233, 11%, 84%);
     --text-muted: hsl(236, 9%, 61%);
-    --bg-image-mobile: url('images/bg-mobile-light.jpg');
-    --bg-image-desktop: url('images/bg-desktop-light.jpg');
+    --bg-image-mobile: url('assets/bg-mobile-light.jpg');
+    --bg-image-desktop: url('assets/bg-desktop-light.jpg');
 }
 
 body.dark-mode {
@@ -19,8 +19,8 @@ body.dark-mode {
     --task-border: hsl(237, 14%, 26%);
     --checkbox-bg: hsl(237, 14%, 26%);
     --text-muted: hsl(236, 9%, 52%);
-    --bg-image-mobile: url('images/bg-mobile-dark.jpg');
-    --bg-image-desktop: url('images/bg-desktop-dark.jpg');
+    --bg-image-mobile: url('assets/bg-mobile-dark.jpg');
+    --bg-image-desktop: url('assets/bg-desktop-dark.jpg');
 }
 
 
