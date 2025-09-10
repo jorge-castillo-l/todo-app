@@ -32,7 +32,6 @@ Aplicación de lista de tareas (*To-Do*) basada en el desafío de [Frontend Ment
 ## ⚙️ Instalación y uso
 Clona el repositorio e inicia el proyecto localmente:  
 
-```bash
 git clone https://github.com/jorge-castillo-l/todo-app.git
 cd todo-app
 open index.html
