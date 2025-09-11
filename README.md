@@ -52,8 +52,7 @@ O ábrelo directamente desde la [demo en GitHub Pages](https://jorge-castillo-l.
 - 🧩 **Drag & Drop** para reordenar tareas con **persistencia** del nuevo orden.  
 - ✏️ **Edición inline** de tareas (Enter para guardar, Esc para cancelar).  
 - ♿ **Accesibilidad**: roles/atributos ARIA, foco visible y navegación completa con teclado (Tab/Enter/Espacio).  
-- 🌗 **Toggle de modo oscuro** funcional (guardar preferencia en `localStorage`).  
-- ✅ **Testing**: pruebas unitarias con **Jest** (lógica de filtros y contador), y (opcional) E2E con Playwright.  
+- 🌗 **Toggle de modo oscuro** funcional (guardar preferencia en `localStorage`). 
 - 🧱 **Refactor a módulos ES** (`import/export`) para separar lógica (storage, filtros, UI).  
 - 🧼 **Limpieza y documentación**: comentarios clave, README con GIF de uso y sección de troubleshooting.  
 
