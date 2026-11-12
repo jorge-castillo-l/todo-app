@@ -96,6 +96,7 @@ button, input, textarea, select {
     border-radius: 5px;
     display: flex;
     align-items: center;
+    gap: 1rem;
     padding: 1rem;
     margin-bottom: 1rem;
     box-shadow: 0px 35px 50px -15px rgba(194, 195, 214, 0.5);
@@ -107,7 +108,36 @@ button, input, textarea, select {
     border: 1px solid var(--task-border);
     border-radius: 50%;
     display: inline-block;
-    margin-right: 1rem;
+    flex-shrink: 0;
+}
+
+.todo__drag-spacer,
+.todo__handle {
+    width: 20px;
+    flex-shrink: 0;
+}
+
+.todo__handle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 28px;
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--text-muted);
+    cursor: grab;
+    touch-action: none;
+}
+
+.todo__handle svg {
+    display: block;
+    fill: currentColor;
+}
+
+.todo__handle:active,
+.todo__item--dragging .todo__handle {
+    cursor: grabbing;
 }
 
 .todo__input {
@@ -148,6 +178,14 @@ button, input, textarea, select {
     gap: 1rem;
 }
 
+.todo__item--dragging {
+    position: relative;
+    z-index: 1;
+    opacity: 0.72;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+    user-select: none;
+}
+
 .todo__check {
     width: 20px;
     height: 20px;
@@ -185,6 +223,7 @@ button, input, textarea, select {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 1rem;
     padding: 1rem;
     font-size: 0.75rem;
     color: var(--text-muted);
@@ -200,10 +239,45 @@ button, input, textarea, select {
     color: var(--text-muted);
     cursor: pointer;
     font-size: 0.75rem;
+    padding: 0;
+    flex-shrink: 0;
 }
 
 .todo__clear:hover {
     color: var(--text-color);
+}
+
+.todo__clear:disabled,
+.todo__clear:disabled:hover {
+    opacity: 0.45;
+    color: var(--text-muted);
+    cursor: default;
+}
+
+.todo__export {
+    display: block;
+    width: 100%;
+    margin-top: 1rem;
+    padding: 1rem;
+    border: none;
+    border-radius: 5px;
+    background-color: var(--input-bg);
+    color: var(--accent-color);
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0px 10px 15px -5px rgba(0, 0, 0, 0.3), 0px 5px 5px -5px rgba(0, 0, 0, 0.2);
+}
+
+.todo__export:hover {
+    color: var(--text-color);
+}
+
+.todo__export:disabled,
+.todo__export:disabled:hover {
+    color: var(--text-muted);
+    cursor: default;
+    box-shadow: none;
 }
 
 .todo__filters-desktop,
@@ -217,6 +291,8 @@ button, input, textarea, select {
 
 .todo__filters-desktop {
     display: none;
+    padding: 0;
+    background-color: transparent;
 }
 
 .todo__filters-mobile {
@@ -273,6 +349,89 @@ button, input, textarea, select {
     margin-top: 2.5rem;
 }
 
+.todo__live {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.todo__dialog {
+    position: fixed;
+    inset: 0;
+    width: min(28rem, calc(100vw - 2rem));
+    height: fit-content;
+    margin: auto;
+    padding: 1.5rem;
+    border: none;
+    border-radius: 5px;
+    background: var(--input-bg);
+    color: var(--text-color);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+}
+
+.todo__dialog::backdrop {
+    background: hsl(235 21% 11% / 0.55);
+}
+
+.todo__dialog-text {
+    font-size: 1rem;
+    line-height: 1.45;
+    margin-bottom: 1.25rem;
+    overflow-wrap: anywhere;
+    max-height: 40vh;
+    overflow: auto;
+}
+
+.todo__dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+}
+
+.todo__dialog-cancel,
+.todo__dialog-confirm {
+    border-radius: 5px;
+    padding: 0.65rem 1rem;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.todo__dialog-cancel {
+    border: none;
+    background: none;
+    color: var(--text-muted);
+}
+
+.todo__dialog-cancel:hover {
+    color: var(--text-color);
+}
+
+.todo__dialog-confirm {
+    border: none;
+    color: white;
+    background: linear-gradient(to bottom right, hsl(192, 100%, 67%), hsl(280, 87%, 65%));
+}
+
+.todo__handle:focus-visible,
+.todo__export:focus-visible,
+.todo__clear:focus-visible,
+.todo__filter:focus-visible,
+.todo__check:focus-visible,
+.todo__delete:focus-visible,
+.todo__dialog-cancel:focus-visible,
+.todo__dialog-confirm:focus-visible,
+.todo__input:focus-visible {
+    outline: 2px solid var(--accent-color);
+    outline-offset: 2px;
+}
+
 @media (min-width: 768px) {
     :root {
         font-size: 18px;
@@ -319,6 +478,7 @@ button, input, textarea, select {
     .todo__form {
         padding: 1.2rem;
         margin-bottom: 1.25rem;
+        gap: 1.25rem;
     }
 
     .todo__input {
@@ -329,7 +489,10 @@ button, input, textarea, select {
     .todo__circle {
         width: 24px;
         height: 24px;
-        margin-right: 1.25rem;
+    }
+
+    .todo__footer {
+        padding: 1rem 1.2rem;
     }
 
     .todo__background {
@@ -356,10 +519,6 @@ button, input, textarea, select {
     .todo__check img {
         width: 0.6rem;
         height: 0.6rem;
-    }
-
-    .todo__footer {
-        padding: 0 1.2rem;
     }
 
     .todo__drag-info {

@@ -1,116 +1,169 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // --- Selectores base ---
     const form = document.querySelector('.todo__form');
     const input = document.querySelector('.todo__input');
     const list = document.querySelector('.todo__list');
     const filtersMobile = document.querySelector('.todo__filters-mobile');
     const filtersDesktop = document.querySelector('.todo__filters-desktop');
     const clearBtn = document.querySelector('.todo__clear');
-    const ALL_FILTER_BTNS = document.querySelectorAll('.todo__filter');
+    const exportBtn = document.querySelector('.todo__export');
+    const itemsLeft = document.querySelector('.todo__items-left');
+    const live = document.querySelector('.todo__live');
+    const dialog = document.querySelector('.todo__dialog');
+    const confirmMessage = document.querySelector('#confirm-message');
+    const allFilterBtns = document.querySelectorAll('.todo__filter');
 
-    // --- Storage keys ---
     const STORAGE_KEY = 'todos';
     const FILTER_KEY = 'todo_current_filter';
-
-    // --- Filtros: estado único ---
     const VALID_FILTERS = new Set(['all', 'active', 'completed']);
-    let currentFilter = loadSavedFilter(); // 'all' | 'active' | 'completed'
 
-    // ===============================
-    //       CREAR Y RENDER ITEM
-    // ===============================
-    function createItem(task, completed = false) {
-        const img_check = document.createElement('img');
-        img_check.src = './assets/icon-check.svg';
-        img_check.alt = 'Task completed checkmark';
+    let currentFilter = loadSavedFilter();
+    let confirmOpen = false;
 
-        const img_tododelete = document.createElement('img');
-        img_tododelete.src = './assets/icon-cross.svg';
-        img_tododelete.alt = 'Delete icon';
-
-        const button_delete = document.createElement('button');
-        button_delete.classList.add('todo__delete');
-
-        const button_check = document.createElement('button');
-        button_check.classList.add('todo__check');
-
-        const p_item = document.createElement('p');
-        p_item.classList.add('todo__text');
-        p_item.textContent = task;
-
-        const item = document.createElement('li');
-        item.classList.add('todo__item');
-
-        // Estructura
-        item.appendChild(button_check);
-        button_check.appendChild(img_check);
-        item.appendChild(p_item);
-        item.appendChild(button_delete);
-        button_delete.appendChild(img_tododelete);
-
-        // Estado completado (si viene desde storage)
-        if (completed) {
-        item.classList.add('completed');
-        button_check.classList.add('checked');
-        }
-
-        list.appendChild(item);
+    function createHandle() {
+        const handle = document.createElement('button');
+        handle.type = 'button';
+        handle.className = 'todo__handle';
+        handle.setAttribute('aria-label', 'Arrastrar para reordenar. Con el teclado, flecha arriba o abajo.');
+        handle.innerHTML = `
+            <svg viewBox="0 0 16 22" width="16" height="22" aria-hidden="true" focusable="false">
+                <circle cx="4.5" cy="4" r="1.35"></circle>
+                <circle cx="11.5" cy="4" r="1.35"></circle>
+                <circle cx="4.5" cy="11" r="1.35"></circle>
+                <circle cx="11.5" cy="11" r="1.35"></circle>
+                <circle cx="4.5" cy="18" r="1.35"></circle>
+                <circle cx="11.5" cy="18" r="1.35"></circle>
+            </svg>`;
+        return handle;
     }
 
-    // ========================
-    //         ENTRADA
-    // ========================
+    function syncCheckButton(button, completed) {
+        button.classList.toggle('checked', completed);
+        button.setAttribute('aria-pressed', completed ? 'true' : 'false');
+        button.setAttribute('aria-label', completed ? 'Marcar como pendiente' : 'Marcar como hecha');
+    }
+
+    function createItem(task, completed = false) {
+        const imgCheck = document.createElement('img');
+        imgCheck.src = './assets/icon-check.svg';
+        imgCheck.alt = '';
+        imgCheck.setAttribute('aria-hidden', 'true');
+
+        const imgDelete = document.createElement('img');
+        imgDelete.src = './assets/icon-cross.svg';
+        imgDelete.alt = '';
+        imgDelete.setAttribute('aria-hidden', 'true');
+
+        const buttonDelete = document.createElement('button');
+        buttonDelete.type = 'button';
+        buttonDelete.className = 'todo__delete';
+        buttonDelete.setAttribute('aria-label', 'Eliminar tarea');
+
+        const buttonCheck = document.createElement('button');
+        buttonCheck.type = 'button';
+        buttonCheck.className = 'todo__check';
+
+        const text = document.createElement('p');
+        text.className = 'todo__text';
+        text.textContent = task;
+
+        const item = document.createElement('li');
+        item.className = 'todo__item';
+        item.draggable = true;
+
+        item.append(createHandle(), buttonCheck, text, buttonDelete);
+        buttonCheck.appendChild(imgCheck);
+        buttonDelete.appendChild(imgDelete);
+
+        if (completed) item.classList.add('completed');
+        syncCheckButton(buttonCheck, completed);
+
+        list.appendChild(item);
+        return item;
+    }
+
+    function taskText(item) {
+        return item.querySelector('.todo__text')?.textContent?.trim() ?? '';
+    }
+
+    function visibleItems() {
+        return [...list.querySelectorAll('.todo__item')].filter((item) => item.style.display !== 'none');
+    }
+
     function enterTask() {
-        form.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const task = input.value.trim();
-        if (task === '') return;
-        createItem(task);
-        saveTodos();
-        applyFilter(); // respeta el filtro activo
-        updateItemsLeft();
-        input.value = '';
+        form.addEventListener('submit', (event) => {
+            event.preventDefault();
+            const task = input.value.trim();
+            if (task === '') return;
+            createItem(task);
+            saveTodos();
+            applyFilter();
+            updateItemsLeft();
+            input.value = '';
         });
     }
 
-    // ========================
-    //         ELIMINAR
-    // ========================
+    function askConfirm(message) {
+        if (confirmOpen) return Promise.resolve(false);
+        confirmOpen = true;
+        confirmMessage.textContent = message;
+
+        try {
+            dialog.showModal();
+        } catch (err) {
+            confirmOpen = false;
+            return Promise.resolve(false);
+        }
+
+        return new Promise((resolve) => {
+            dialog.addEventListener('close', () => {
+                confirmOpen = false;
+                resolve(dialog.returnValue === 'confirm');
+            }, { once: true });
+        });
+    }
+
+    function initConfirmDialog() {
+        dialog.addEventListener('click', (event) => {
+            if (event.target === dialog) dialog.close('cancel');
+        });
+    }
+
     function deleteTask() {
-        list.addEventListener('click', (e) => {
-        const btnDelete = e.target.closest('.todo__delete');
-        if (btnDelete) {
+        list.addEventListener('click', async (event) => {
+            const btnDelete = event.target.closest('.todo__delete');
+            if (!btnDelete) return;
+
             const item = btnDelete.closest('.todo__item');
+            if (!item) return;
+
+            const text = taskText(item);
+            const confirmed = await askConfirm(`¿Seguro que quieres eliminar «${text}»?`);
+            if (!confirmed || !item.isConnected) return;
+
             item.remove();
             saveTodos();
             applyFilter();
             updateItemsLeft();
-        }
         });
     }
 
-    // =========================
-    //     COMPLETAR / DES
-    // =========================
     function checkTask() {
-        list.addEventListener('click', (e) => {
-        const checkBtn = e.target.closest('.todo__check');
-        if (checkBtn) {
-            checkBtn.classList.toggle('checked');
+        list.addEventListener('click', (event) => {
+            const checkBtn = event.target.closest('.todo__check');
+            if (!checkBtn) return;
+
             const item = checkBtn.closest('.todo__item');
-            if (item) {
-            item.classList.toggle('completed');
+            if (!item) return;
+
+            const completed = !item.classList.contains('completed');
+            item.classList.toggle('completed', completed);
+            syncCheckButton(checkBtn, completed);
             saveTodos();
             applyFilter();
             updateItemsLeft();
-            }
-        }
         });
     }
 
-    // =========================
-    //         FILTROS
-    // =========================
     function loadSavedFilter() {
         const raw = localStorage.getItem(FILTER_KEY);
         return VALID_FILTERS.has(raw) ? raw : 'all';
@@ -132,27 +185,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function syncActiveFilterUI(active) {
         const target = (active || '').trim().toLowerCase();
-        ALL_FILTER_BTNS.forEach((btn) => {
-        const value = (btn.dataset.filter || '').trim().toLowerCase();
-        const isActive = value === target;
-        btn.classList.toggle('todo__filter--active', isActive);
-        btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+        allFilterBtns.forEach((btn) => {
+            const value = (btn.dataset.filter || '').trim().toLowerCase();
+            const isActive = value === target;
+            btn.classList.toggle('todo__filter--active', isActive);
+            btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
         });
     }
 
     function applyFilter() {
-        const items = list.querySelectorAll('.todo__item');
-        items.forEach((li) => {
-        const isCompleted = li.classList.contains('completed');
-        let show = true;
-        if (currentFilter === 'active') show = !isCompleted;
-        if (currentFilter === 'completed') show = isCompleted;
-        li.style.display = show ? '' : 'none';
+        list.querySelectorAll('.todo__item').forEach((item) => {
+            const isCompleted = item.classList.contains('completed');
+            let show = true;
+            if (currentFilter === 'active') show = !isCompleted;
+            if (currentFilter === 'completed') show = isCompleted;
+            item.style.display = show ? '' : 'none';
         });
     }
 
-    function handleFilterDelegation(e) {
-        const btn = e.target.closest('.todo__filter');
+    function handleFilterDelegation(event) {
+        const btn = event.target.closest('.todo__filter');
         if (!btn) return;
         setCurrentFilter(btn.dataset.filter);
     }
@@ -164,75 +216,274 @@ document.addEventListener('DOMContentLoaded', () => {
         applyFilter();
     }
 
-    // =========================
-    //     CONTADOR PENDIENTES
-    // =========================
     function updateItemsLeft() {
-        const count = document.querySelectorAll('.todo__item:not(.completed)').length;
-        document.querySelector('.todo__items-left').textContent = `${count} items left`;
+        const pending = list.querySelectorAll('.todo__item:not(.completed)').length;
+        const completed = list.querySelectorAll('.todo__item.completed').length;
+        itemsLeft.textContent = pending === 1
+            ? '1 tarea pendiente'
+            : `${pending} tareas pendientes`;
+
+        clearBtn.disabled = completed === 0;
+        exportBtn.disabled = completed === 0;
+        clearBtn.title = completed === 0
+            ? 'No hay tareas hechas para borrar'
+            : 'Borrar todas las tareas hechas';
+        exportBtn.title = completed === 0
+            ? 'No hay tareas hechas para exportar'
+            : 'Descargar las tareas hechas en un archivo Markdown';
     }
 
-    // =========================
-    //     CLEAR COMPLETED
-    // =========================
     function clearCompleted() {
-        clearBtn.addEventListener('click', () => {
-        const itemsCompleted = document.querySelectorAll('.todo__item.completed');
-        itemsCompleted.forEach((item) => item.remove());
-        updateItemsLeft();
-        saveTodos();
-        applyFilter();
+        clearBtn.addEventListener('click', async () => {
+            const items = [...list.querySelectorAll('.todo__item.completed')];
+            if (items.length === 0) return;
+
+            const message = items.length === 1
+                ? `¿Seguro que quieres eliminar «${taskText(items[0])}»?`
+                : `¿Seguro que quieres eliminar las ${items.length} tareas hechas?`;
+            const confirmed = await askConfirm(message);
+            if (!confirmed) return;
+
+            items.forEach((item) => item.remove());
+            saveTodos();
+            applyFilter();
+            updateItemsLeft();
         });
     }
 
-    // =========================
-    //   STORAGE: GUARDAR/LEER
-    // =========================
-    function saveTodos() {
-        // snapshot del DOM actual (formato actual)
-        const items = document.querySelectorAll('.todo__item');
-        const snapshot = [];
-        items.forEach((li) => {
-        const text = li.querySelector('.todo__text')?.textContent ?? '';
-        const completed = li.classList.contains('completed');
-        if (text.trim() !== '') {
-            snapshot.push({ text, completed });
+    function buildCompletedMarkdown(tasks) {
+        const fecha = new Intl.DateTimeFormat('es', { dateStyle: 'long' }).format(new Date());
+        const resumen = tasks.length === 1 ? '1 tarea hecha.' : `${tasks.length} tareas hechas.`;
+        const cuerpo = tasks
+            .map((task) => `- [x] ${task.replace(/[\r\n]+/g, ' ')}`)
+            .join('\n');
+
+        return `# Tareas hechas\n\nExportado el ${fecha}. ${resumen}\n\n${cuerpo}\n`;
+    }
+
+    function exportCompleted() {
+        exportBtn.addEventListener('click', () => {
+            const tasks = [...list.querySelectorAll('.todo__item.completed')]
+                .map((item) => taskText(item))
+                .filter(Boolean);
+            if (tasks.length === 0) return;
+
+            const markdown = buildCompletedMarkdown(tasks);
+            const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'tareas-hechas.md';
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.setTimeout(() => URL.revokeObjectURL(url), 1500);
+        });
+    }
+
+    function announce(message) {
+        live.textContent = '';
+        window.setTimeout(() => {
+            live.textContent = message;
+        }, 20);
+    }
+
+    function moveItem(item, direction) {
+        if (!item) return false;
+        const items = visibleItems();
+        const index = items.indexOf(item);
+        const target = items[index + direction];
+        if (!target) return false;
+
+        if (direction > 0) {
+            list.insertBefore(item, target.nextSibling);
+        } else {
+            list.insertBefore(item, target);
         }
+
+        saveTodos();
+        const position = visibleItems().indexOf(item) + 1;
+        announce(`Tarea en la posición ${position} de ${visibleItems().length}`);
+        item.querySelector('.todo__handle')?.focus();
+        return true;
+    }
+
+    function getDragAfterElement(y) {
+        const items = visibleItems().filter((item) => !item.classList.contains('todo__item--dragging'));
+        let closest = null;
+        let closestOffset = Number.NEGATIVE_INFINITY;
+
+        items.forEach((item) => {
+            const box = item.getBoundingClientRect();
+            const offset = y - box.top - box.height / 2;
+            if (offset < 0 && offset > closestOffset) {
+                closestOffset = offset;
+                closest = item;
+            }
+        });
+
+        return closest;
+    }
+
+    function placeDragItem(y) {
+        const after = getDragAfterElement(y);
+        if (after == null) {
+            list.appendChild(dragState.item);
+        } else if (after !== dragState.item) {
+            list.insertBefore(dragState.item, after);
+        }
+    }
+
+    const dragState = {
+        item: null,
+        pointerId: null
+    };
+
+    function finishDrag() {
+        if (!dragState.item) return;
+        dragState.item.classList.remove('todo__item--dragging');
+        dragState.item = null;
+        dragState.pointerId = null;
+        saveTodos();
+    }
+
+    function initDragAndDrop() {
+        let pendingItem = null;
+        let startY = 0;
+
+        const beginPointerDrag = (item) => {
+            dragState.item = item;
+            item.classList.add('todo__item--dragging');
+        };
+
+        list.addEventListener('dragstart', (event) => {
+            if (dragState.pointerId !== null) {
+                event.preventDefault();
+                return;
+            }
+
+            const item = event.target.closest('.todo__item');
+            if (!item || event.target.closest('.todo__check, .todo__delete, .todo__handle')) {
+                event.preventDefault();
+                return;
+            }
+
+            dragState.item = item;
+            item.classList.add('todo__item--dragging');
+            event.dataTransfer.effectAllowed = 'move';
+            event.dataTransfer.setData('text/plain', taskText(item));
+            event.dataTransfer.setDragImage(item, 24, 24);
+        });
+
+        list.addEventListener('dragover', (event) => {
+            if (!dragState.item || dragState.pointerId !== null) return;
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'move';
+            placeDragItem(event.clientY);
+        });
+
+        list.addEventListener('drop', (event) => {
+            if (!dragState.item || dragState.pointerId !== null) return;
+            event.preventDefault();
+        });
+
+        list.addEventListener('dragend', () => {
+            if (dragState.pointerId !== null) return;
+            finishDrag();
+        });
+
+        list.addEventListener('pointerdown', (event) => {
+            if (event.button !== 0) return;
+            const handle = event.target.closest('.todo__handle');
+            if (!handle) return;
+            const item = handle.closest('.todo__item');
+            if (!item) return;
+
+            pendingItem = item;
+            startY = event.clientY;
+            dragState.pointerId = event.pointerId;
+            try {
+                handle.setPointerCapture(event.pointerId);
+            } catch (err) {
+                // Los eventos sintéticos no tienen un puntero activo.
+            }
+        });
+
+        list.addEventListener('pointermove', (event) => {
+            if (event.pointerId !== dragState.pointerId || !pendingItem) return;
+            if (!dragState.item && Math.abs(event.clientY - startY) >= 4) {
+                beginPointerDrag(pendingItem);
+            }
+            if (!dragState.item) return;
+            event.preventDefault();
+            placeDragItem(event.clientY);
+        }, { passive: false });
+
+        const stopTouchDrag = (event) => {
+            if (event.pointerId !== dragState.pointerId) return;
+            pendingItem = null;
+            if (dragState.item) finishDrag();
+            dragState.pointerId = null;
+        };
+
+        list.addEventListener('pointerup', stopTouchDrag);
+        list.addEventListener('pointercancel', stopTouchDrag);
+
+        list.addEventListener('keydown', (event) => {
+            const handle = event.target.closest('.todo__handle');
+            if (!handle) return;
+            if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
+            event.preventDefault();
+            moveItem(handle.closest('.todo__item'), event.key === 'ArrowUp' ? -1 : 1);
+        });
+    }
+
+    function saveTodos() {
+        const snapshot = [...list.querySelectorAll('.todo__item')].flatMap((item) => {
+            const text = taskText(item);
+            if (text === '') return [];
+            return [{ text, completed: item.classList.contains('completed') }];
         });
         localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
     }
 
     function loadTodos() {
         try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (!raw) { updateItemsLeft(); return; }
-        const todos = JSON.parse(raw);
-        if (!Array.isArray(todos)) { updateItemsLeft(); return; }
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (!raw) {
+                updateItemsLeft();
+                return;
+            }
 
-        todos.forEach((t) => {
-            const text = typeof t.text === 'string' ? t.text : '';
-            const completed = Boolean(t.completed);
-            if (text.trim() !== '') createItem(text, completed);
-        });
+            const todos = JSON.parse(raw);
+            if (!Array.isArray(todos)) {
+                updateItemsLeft();
+                return;
+            }
 
-        updateItemsLeft();
-        syncActiveFilterUI(currentFilter);
-        applyFilter();
+            todos.forEach((todo) => {
+                const text = typeof todo.text === 'string' ? todo.text : '';
+                if (text.trim() !== '') createItem(text, Boolean(todo.completed));
+            });
+
+            updateItemsLeft();
+            syncActiveFilterUI(currentFilter);
+            applyFilter();
         } catch (err) {
-        console.error('Error leyendo localStorage:', err);
-        updateItemsLeft();
-        syncActiveFilterUI(currentFilter);
-        applyFilter();
+            console.error('Error leyendo localStorage:', err);
+            updateItemsLeft();
+            syncActiveFilterUI(currentFilter);
+            applyFilter();
         }
     }
 
-    // =========================
-    //       BOOTSTRAP APP
-    // =========================
     loadTodos();
     enterTask();
     deleteTask();
     checkTask();
     initFilters();
     clearCompleted();
+    exportCompleted();
+    initDragAndDrop();
+    initConfirmDialog();
 });
