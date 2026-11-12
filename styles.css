@@ -198,9 +198,30 @@ button, input, textarea, select {
 
 .todo__text {
     flex: 1;
+    min-width: 0;
+    border: none;
+    background: none;
+    padding: 0;
+    text-align: left;
     font-size: 0.75rem;
     color: var(--text-color);
     line-height: 1.5;
+    cursor: text;
+    overflow-wrap: anywhere;
+}
+
+.todo__edit {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    border-bottom: 1px solid var(--accent-color);
+    border-radius: 0;
+    background: transparent;
+    color: var(--text-color);
+    font: inherit;
+    font-size: 0.75rem;
+    line-height: 1.5;
+    padding: 0;
 }
 
 .todo__delete {
@@ -329,6 +350,10 @@ button, input, textarea, select {
     text-decoration: line-through;
 }
 
+.completed .todo__edit {
+    color: var(--text-color);
+}
+
 .todo__check img {
     width: 0.75rem;
     height: 0.75rem;
@@ -420,6 +445,8 @@ button, input, textarea, select {
 }
 
 .todo__handle:focus-visible,
+.todo__text:focus-visible,
+.todo__edit:focus-visible,
 .todo__export:focus-visible,
 .todo__clear:focus-visible,
 .todo__filter:focus-visible,
@@ -506,7 +533,8 @@ button, input, textarea, select {
         height: auto;
     }
 
-    .todo__text {
+    .todo__text,
+    .todo__edit {
         font-size: 1rem;
         line-height: normal;
     }

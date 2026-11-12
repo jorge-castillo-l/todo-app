@@ -62,9 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
         buttonCheck.type = 'button';
         buttonCheck.className = 'todo__check';
 
-        const text = document.createElement('p');
-        text.className = 'todo__text';
-        text.textContent = task;
+        const text = createTextButton(task);
 
         const item = document.createElement('li');
         item.className = 'todo__item';
@@ -81,8 +79,77 @@ document.addEventListener('DOMContentLoaded', () => {
         return item;
     }
 
+    function createTextButton(task) {
+        const text = document.createElement('button');
+        text.type = 'button';
+        text.className = 'todo__text';
+        text.textContent = task;
+        text.title = 'Clic para editar';
+        text.setAttribute('aria-label', `Editar «${task}»`);
+        return text;
+    }
+
     function taskText(item) {
-        return item.querySelector('.todo__text')?.textContent?.trim() ?? '';
+        const node = item.querySelector('.todo__edit, .todo__text');
+        if (!node) return '';
+        const value = node.classList.contains('todo__edit') ? node.value : node.textContent;
+        return value.trim();
+    }
+
+    function startEdit(item) {
+        if (!item || item.classList.contains('todo__item--editing')) return;
+        const text = item.querySelector('.todo__text');
+        if (!text) return;
+
+        const original = text.textContent;
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'todo__edit';
+        input.value = original;
+        input.setAttribute('aria-label', 'Editar tarea');
+        input.maxLength = 200;
+
+        item.classList.add('todo__item--editing');
+        item.draggable = false;
+        text.replaceWith(input);
+        input.focus();
+        input.select();
+
+        let closed = false;
+        const finish = (save) => {
+            if (closed) return;
+            closed = true;
+
+            const next = input.value.trim();
+            const finalText = save && next !== '' ? next : original;
+            input.replaceWith(createTextButton(finalText));
+            item.classList.remove('todo__item--editing');
+            item.draggable = true;
+
+            if (finalText !== original) {
+                saveTodos();
+                announce(`Tarea actualizada a ${finalText}`);
+            }
+        };
+
+        input.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                finish(true);
+            } else if (event.key === 'Escape') {
+                event.preventDefault();
+                finish(false);
+            }
+        });
+        input.addEventListener('blur', () => finish(true));
+    }
+
+    function initEdit() {
+        list.addEventListener('click', (event) => {
+            const text = event.target.closest('.todo__text');
+            if (!text || !list.contains(text)) return;
+            startEdit(text.closest('.todo__item'));
+        });
     }
 
     function visibleItems() {
@@ -374,7 +441,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const item = event.target.closest('.todo__item');
-            if (!item || event.target.closest('.todo__check, .todo__delete, .todo__handle')) {
+            if (!item || event.target.closest('.todo__check, .todo__delete, .todo__handle, .todo__text, .todo__edit')) {
                 event.preventDefault();
                 return;
             }
@@ -496,5 +563,6 @@ document.addEventListener('DOMContentLoaded', () => {
     clearCompleted();
     exportCompleted();
     initDragAndDrop();
+    initEdit();
     initConfirmDialog();
 });
