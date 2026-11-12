@@ -103,22 +103,33 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function askConfirm(message) {
+        if (!dialog || typeof dialog.showModal !== 'function') {
+            return Promise.resolve(window.confirm(message));
+        }
         if (confirmOpen) return Promise.resolve(false);
+
         confirmOpen = true;
         confirmMessage.textContent = message;
-
-        try {
-            dialog.showModal();
-        } catch (err) {
-            confirmOpen = false;
-            return Promise.resolve(false);
-        }
+        dialog.returnValue = '';
 
         return new Promise((resolve) => {
-            dialog.addEventListener('close', () => {
+            const finish = () => {
                 confirmOpen = false;
                 resolve(dialog.returnValue === 'confirm');
-            }, { once: true });
+            };
+            dialog.addEventListener('close', finish, { once: true });
+
+            // El clic que abre el diálogo no debe caer sobre «Eliminar».
+            window.setTimeout(() => {
+                if (!confirmOpen) return;
+                try {
+                    dialog.showModal();
+                } catch (err) {
+                    dialog.removeEventListener('close', finish);
+                    confirmOpen = false;
+                    resolve(window.confirm(message));
+                }
+            }, 0);
         });
     }
 
