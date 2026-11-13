@@ -2,6 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const form = document.querySelector('.todo__form');
     const input = document.querySelector('.todo__input');
     const list = document.querySelector('.todo__list');
+    const topics = document.querySelector('.todo__topics');
     const filtersMobile = document.querySelector('.todo__filters-mobile');
     const filtersDesktop = document.querySelector('.todo__filters-desktop');
     const clearBtn = document.querySelector('.todo__clear');
@@ -13,11 +14,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const allFilterBtns = document.querySelectorAll('.todo__filter');
 
     const STORAGE_KEY = 'todos';
+    const LISTS_KEY = 'todo_lists';
     const FILTER_KEY = 'todo_current_filter';
     const VALID_FILTERS = new Set(['all', 'active', 'completed']);
 
     let currentFilter = loadSavedFilter();
     let confirmOpen = false;
+    let lists = [];
+    let currentListId = null;
 
     function createHandle() {
         const handle = document.createElement('button');
@@ -329,14 +333,24 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function buildCompletedMarkdown(tasks) {
+    function buildCompletedMarkdown(tasks, listName) {
         const fecha = new Intl.DateTimeFormat('es', { dateStyle: 'long' }).format(new Date());
         const resumen = tasks.length === 1 ? '1 tarea hecha.' : `${tasks.length} tareas hechas.`;
         const cuerpo = tasks
             .map((task) => `- [x] ${task.replace(/[\r\n]+/g, ' ')}`)
             .join('\n');
 
-        return `# Tareas hechas\n\nExportado el ${fecha}. ${resumen}\n\n${cuerpo}\n`;
+        return `# Tareas hechas: ${listName}\n\nExportado el ${fecha}. ${resumen}\n\n${cuerpo}\n`;
+    }
+
+    function listFileSlug(name) {
+        const slug = name
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-|-$/g, '');
+        return slug || 'lista';
     }
 
     function exportCompleted() {
@@ -346,12 +360,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 .filter(Boolean);
             if (tasks.length === 0) return;
 
-            const markdown = buildCompletedMarkdown(tasks);
+            const listName = currentList()?.name || 'Lista';
+            const markdown = buildCompletedMarkdown(tasks, listName);
             const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8' });
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;
-            link.download = 'tareas-hechas.md';
+            link.download = `tareas-hechas-${listFileSlug(listName)}.md`;
             document.body.appendChild(link);
             link.click();
             link.remove();
@@ -516,46 +531,257 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    function createListId() {
+        if (window.crypto?.randomUUID) return crypto.randomUUID();
+        return `lista-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    }
+
+    function normalizeTodos(value) {
+        if (!Array.isArray(value)) return [];
+        return value.flatMap((todo) => {
+            const text = typeof todo?.text === 'string' ? todo.text.trim() : '';
+            if (text === '') return [];
+            return [{ text, completed: Boolean(todo.completed) }];
+        });
+    }
+
+    function readLegacyTodos() {
+        try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (!raw) return [];
+            return normalizeTodos(JSON.parse(raw));
+        } catch (err) {
+            return [];
+        }
+    }
+
+    function currentList() {
+        return lists.find((entry) => entry.id === currentListId) || lists[0] || null;
+    }
+
+    function saveLists() {
+        const active = currentList();
+        currentListId = active?.id || null;
+        localStorage.setItem(LISTS_KEY, JSON.stringify({
+            currentId: currentListId,
+            lists
+        }));
+        localStorage.removeItem(STORAGE_KEY);
+    }
+
+    function loadLists() {
+        try {
+            const raw = localStorage.getItem(LISTS_KEY);
+            const saved = raw ? JSON.parse(raw) : null;
+            const savedLists = Array.isArray(saved?.lists)
+                ? saved.lists.flatMap((entry) => {
+                    const name = typeof entry?.name === 'string' ? entry.name.trim() : '';
+                    const id = typeof entry?.id === 'string' && entry.id !== '' ? entry.id : createListId();
+                    if (name === '') return [];
+                    return [{ id, name, todos: normalizeTodos(entry.todos) }];
+                })
+                : [];
+
+            if (savedLists.length > 0) {
+                lists = savedLists;
+                currentListId = savedLists.some((entry) => entry.id === saved.currentId)
+                    ? saved.currentId
+                    : savedLists[0].id;
+                return;
+            }
+        } catch (err) {
+            console.error('Error leyendo las listas:', err);
+        }
+
+        lists = [{
+            id: createListId(),
+            name: 'Personal',
+            todos: readLegacyTodos()
+        }];
+        currentListId = lists[0].id;
+        saveLists();
+    }
+
+    function paintTodos(todos) {
+        list.replaceChildren();
+        normalizeTodos(todos).forEach((todo) => createItem(todo.text, todo.completed));
+        syncActiveFilterUI(currentFilter);
+        applyFilter();
+        updateItemsLeft();
+    }
+
     function saveTodos() {
-        const snapshot = [...list.querySelectorAll('.todo__item')].flatMap((item) => {
+        const active = currentList();
+        if (!active) return;
+        active.todos = [...list.querySelectorAll('.todo__item')].flatMap((item) => {
             const text = taskText(item);
             if (text === '') return [];
             return [{ text, completed: item.classList.contains('completed') }];
         });
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
+        saveLists();
     }
 
-    function loadTodos() {
-        try {
-            const raw = localStorage.getItem(STORAGE_KEY);
-            if (!raw) {
-                updateItemsLeft();
+    function renderTopics() {
+        const fragment = document.createDocumentFragment();
+        lists.forEach((entry) => {
+            const group = document.createElement('div');
+            group.className = 'todo__topic-group';
+            group.dataset.id = entry.id;
+            if (entry.id === currentListId) group.classList.add('todo__topic-group--active');
+
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'todo__topic';
+            button.textContent = entry.name;
+            button.title = entry.id === currentListId ? 'Clic para cambiar el nombre' : `Ver ${entry.name}`;
+            button.setAttribute('aria-pressed', entry.id === currentListId ? 'true' : 'false');
+            if (entry.id === currentListId) button.classList.add('todo__topic--active');
+            group.appendChild(button);
+
+            if (lists.length > 1) {
+                const remove = document.createElement('button');
+                remove.type = 'button';
+                remove.className = 'todo__topic-delete';
+                remove.textContent = '×';
+                remove.setAttribute('aria-label', `Eliminar lista ${entry.name}`);
+                group.appendChild(remove);
+            }
+
+            fragment.appendChild(group);
+        });
+
+        const add = document.createElement('button');
+        add.type = 'button';
+        add.className = 'todo__topic-add';
+        add.textContent = 'Nueva lista';
+        fragment.appendChild(add);
+        topics.replaceChildren(fragment);
+    }
+
+    function switchList(id) {
+        if (!id || id === currentListId) return;
+        if (!lists.some((entry) => entry.id === id)) return;
+        saveTodos();
+        currentListId = id;
+        saveLists();
+        paintTodos(currentList().todos);
+        renderTopics();
+        announce(`Lista ${currentList().name}`);
+    }
+
+    function nextListName(base) {
+        const names = new Set(lists.map((entry) => entry.name));
+        if (!names.has(base)) return base;
+        let index = 2;
+        while (names.has(`${base} ${index}`)) index += 1;
+        return `${base} ${index}`;
+    }
+
+    function addList() {
+        saveTodos();
+        const created = {
+            id: createListId(),
+            name: nextListName('Nueva lista'),
+            todos: []
+        };
+        lists.push(created);
+        currentListId = created.id;
+        saveLists();
+        paintTodos([]);
+        renderTopics();
+        const button = topics.querySelector(`[data-id="${CSS.escape(created.id)}"] .todo__topic`);
+        startTopicEdit(button);
+        announce('Nueva lista creada');
+    }
+
+    async function deleteList(id) {
+        if (lists.length < 2) return;
+        const target = lists.find((entry) => entry.id === id);
+        if (!target) return;
+        const confirmed = await askConfirm(`¿Seguro que quieres eliminar la lista «${target.name}» y todas sus tareas?`);
+        if (!confirmed) return;
+
+        if (id !== currentListId) saveTodos();
+        lists = lists.filter((entry) => entry.id !== id);
+        if (!lists.some((entry) => entry.id === currentListId)) currentListId = lists[0].id;
+        saveLists();
+        paintTodos(currentList().todos);
+        renderTopics();
+        announce(`Lista ${target.name} eliminada`);
+    }
+
+    function startTopicEdit(button) {
+        if (!button || !button.isConnected) return;
+        const group = button.closest('.todo__topic-group');
+        const listData = lists.find((entry) => entry.id === group?.dataset.id);
+        if (!listData || topics.querySelector('.todo__topic-edit')) return;
+
+        const original = listData.name;
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'todo__topic-edit';
+        input.value = original;
+        input.maxLength = 40;
+        input.setAttribute('aria-label', 'Editar nombre de la lista');
+        button.replaceWith(input);
+
+        let closed = false;
+        let armed = false;
+        const finish = (save) => {
+            if (closed) return;
+            closed = true;
+            const next = input.value.trim();
+            listData.name = save && next !== '' ? next : original;
+            saveLists();
+            renderTopics();
+            if (listData.name !== original) announce(`Lista actualizada a ${listData.name}`);
+        };
+
+        input.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                finish(true);
+            } else if (event.key === 'Escape') {
+                event.preventDefault();
+                finish(false);
+            }
+        });
+        input.addEventListener('blur', () => {
+            if (!armed) return;
+            finish(true);
+        });
+        window.setTimeout(() => {
+            if (closed || !input.isConnected) return;
+            armed = true;
+            input.focus();
+            input.select();
+        }, 0);
+    }
+
+    function initTopics() {
+        topics.addEventListener('click', (event) => {
+            if (event.target.closest('.todo__topic-add')) {
+                addList();
                 return;
             }
 
-            const todos = JSON.parse(raw);
-            if (!Array.isArray(todos)) {
-                updateItemsLeft();
+            const remove = event.target.closest('.todo__topic-delete');
+            if (remove) {
+                deleteList(remove.closest('.todo__topic-group')?.dataset.id);
                 return;
             }
 
-            todos.forEach((todo) => {
-                const text = typeof todo.text === 'string' ? todo.text : '';
-                if (text.trim() !== '') createItem(text, Boolean(todo.completed));
-            });
-
-            updateItemsLeft();
-            syncActiveFilterUI(currentFilter);
-            applyFilter();
-        } catch (err) {
-            console.error('Error leyendo localStorage:', err);
-            updateItemsLeft();
-            syncActiveFilterUI(currentFilter);
-            applyFilter();
-        }
+            const topic = event.target.closest('.todo__topic');
+            if (!topic) return;
+            const id = topic.closest('.todo__topic-group')?.dataset.id;
+            if (id === currentListId) startTopicEdit(topic);
+            else switchList(id);
+        });
     }
 
-    loadTodos();
+    loadLists();
+    paintTodos(currentList().todos);
+    renderTopics();
     enterTask();
     deleteTask();
     checkTask();
@@ -564,5 +790,6 @@ document.addEventListener('DOMContentLoaded', () => {
     exportCompleted();
     initDragAndDrop();
     initEdit();
+    initTopics();
     initConfirmDialog();
 });

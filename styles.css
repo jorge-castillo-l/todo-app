@@ -66,7 +66,83 @@ button, input, textarea, select {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 2.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.todo__topics {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1.25rem;
+    padding: 0.75rem;
+    background-color: var(--input-bg);
+    border-radius: 5px;
+    box-shadow: 0px 35px 50px -15px rgba(194, 195, 214, 0.5);
+}
+
+.todo__topic-group {
+    display: inline-flex;
+    align-items: center;
+    max-width: 100%;
+    background: transparent;
+    border-radius: 999px;
+}
+
+.todo__topic,
+.todo__topic-add,
+.todo__topic-delete,
+.todo__topic-edit {
+    border: none;
+    background: none;
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.todo__topic,
+.todo__topic-add {
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 0.4rem 0.75rem;
+    border-radius: 999px;
+}
+
+.todo__topic {
+    max-width: 12rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.todo__topic:hover,
+.todo__topic-add:hover {
+    color: var(--text-color);
+}
+
+.todo__topic--active {
+    color: var(--accent-color);
+    cursor: text;
+}
+
+.todo__topic-delete {
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 0.4rem 0.55rem 0.4rem 0;
+    border-radius: 999px;
+}
+
+.todo__topic-delete:hover {
+    color: var(--text-color);
+}
+
+.todo__topic-edit {
+    color: var(--text-color);
+    width: 8rem;
+    max-width: 12rem;
+    padding: 0.2rem 0.35rem;
+    border-bottom: 1px solid var(--accent-color);
+    border-radius: 0;
 }
 
 .todo__title {
@@ -445,6 +521,10 @@ button, input, textarea, select {
 }
 
 .todo__handle:focus-visible,
+.todo__topic:focus-visible,
+.todo__topic-add:focus-visible,
+.todo__topic-delete:focus-visible,
+.todo__topic-edit:focus-visible,
 .todo__text:focus-visible,
 .todo__edit:focus-visible,
 .todo__export:focus-visible,
