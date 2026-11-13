@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const filtersMobile = document.querySelector('.todo__filters-mobile');
     const filtersDesktop = document.querySelector('.todo__filters-desktop');
     const clearBtn = document.querySelector('.todo__clear');
+    const deleteListBtn = document.querySelector('.todo__delete-list');
     const exportBtn = document.querySelector('.todo__export');
     const itemsLeft = document.querySelector('.todo__items-left');
     const live = document.querySelector('.todo__live');
@@ -643,6 +644,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 remove.type = 'button';
                 remove.className = 'todo__topic-delete';
                 remove.textContent = '×';
+                remove.title = 'Eliminar lista';
                 remove.setAttribute('aria-label', `Eliminar lista ${entry.name}`);
                 group.appendChild(remove);
             }
@@ -656,6 +658,12 @@ document.addEventListener('DOMContentLoaded', () => {
         add.textContent = 'Nueva lista';
         fragment.appendChild(add);
         topics.replaceChildren(fragment);
+        if (deleteListBtn) {
+            deleteListBtn.disabled = lists.length < 2;
+            deleteListBtn.title = lists.length < 2
+                ? 'Tiene que quedar al menos una lista'
+                : 'Eliminar la lista activa y sus tareas';
+        }
     }
 
     function switchList(id) {
@@ -776,6 +784,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const id = topic.closest('.todo__topic-group')?.dataset.id;
             if (id === currentListId) startTopicEdit(topic);
             else switchList(id);
+        });
+
+        deleteListBtn?.addEventListener('click', () => {
+            deleteList(currentListId);
         });
     }
 

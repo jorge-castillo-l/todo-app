@@ -85,8 +85,13 @@ button, input, textarea, select {
     display: inline-flex;
     align-items: center;
     max-width: 100%;
-    background: transparent;
+    background: hsl(236 9% 61% / 0.12);
     border-radius: 999px;
+    padding-right: 0.2rem;
+}
+
+.todo__topic-group--active {
+    background: hsl(220 98% 61% / 0.16);
 }
 
 .todo__topic,
@@ -126,14 +131,26 @@ button, input, textarea, select {
 }
 
 .todo__topic-delete {
-    color: var(--text-muted);
+    width: 1.5rem;
+    height: 1.5rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: var(--text-color);
+    background: var(--input-bg);
+    border: 1px solid var(--task-border);
+    border-radius: 50%;
     cursor: pointer;
-    padding: 0.4rem 0.55rem 0.4rem 0;
-    border-radius: 999px;
+    padding: 0;
+    font-size: 1rem;
+    line-height: 1;
 }
 
 .todo__topic-delete:hover {
-    color: var(--text-color);
+    color: white;
+    background: hsl(0, 70%, 55%);
+    border-color: transparent;
 }
 
 .todo__topic-edit {
@@ -320,7 +337,8 @@ button, input, textarea, select {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 1rem;
+    flex-wrap: wrap;
+    gap: 0.75rem 1rem;
     padding: 1rem;
     font-size: 0.75rem;
     color: var(--text-muted);
@@ -330,7 +348,8 @@ button, input, textarea, select {
     color: var(--text-muted);
 }
 
-.todo__clear {
+.todo__clear,
+.todo__delete-list {
     background: none;
     border: none;
     color: var(--text-muted);
@@ -340,12 +359,23 @@ button, input, textarea, select {
     flex-shrink: 0;
 }
 
-.todo__clear:hover {
+.todo__footer-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.85rem;
+    margin-left: auto;
+}
+
+.todo__clear:hover,
+.todo__delete-list:hover {
     color: var(--text-color);
 }
 
 .todo__clear:disabled,
-.todo__clear:disabled:hover {
+.todo__clear:disabled:hover,
+.todo__delete-list:disabled,
+.todo__delete-list:disabled:hover {
     opacity: 0.45;
     color: var(--text-muted);
     cursor: default;
@@ -525,6 +555,7 @@ button, input, textarea, select {
 .todo__topic-add:focus-visible,
 .todo__topic-delete:focus-visible,
 .todo__topic-edit:focus-visible,
+.todo__delete-list:focus-visible,
 .todo__text:focus-visible,
 .todo__edit:focus-visible,
 .todo__export:focus-visible,
